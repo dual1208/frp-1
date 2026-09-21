@@ -101,7 +101,7 @@ func (c *ClientCommonConfig) Complete() error {
 
 type ClientTransportConfig struct {
 	// Protocol specifies the protocol to use when interacting with the server.
-	// Valid values are "tcp", "kcp", "quic", "websocket" and "wss". By default, this value
+	// Valid values are "tcp", "kcp", "quic", "websocket", "wss" and "camouflage". By default, this value
 	// is "tcp".
 	Protocol string `json:"protocol,omitempty"`
 	// WireProtocol specifies the frpc/frps internal wire protocol version.
@@ -142,6 +142,8 @@ type ClientTransportConfig struct {
 	HeartbeatTimeout int64 `json:"heartbeatTimeout,omitempty"`
 	// TLS specifies TLS settings for the connection to the server.
 	TLS TLSClientConfig `json:"tls,omitempty"`
+	// Camouflage carries FRP over authenticated HTTPS/WebSocket.
+	Camouflage *CamouflageClientConfig `json:"camouflage,omitempty"`
 }
 
 func (c *ClientTransportConfig) Complete() {
@@ -163,6 +165,12 @@ func (c *ClientTransportConfig) Complete() {
 	}
 	c.QUIC.Complete()
 	c.TLS.Complete()
+}
+
+// CamouflageClientConfig supplies the file credential for HTTPS/WebSocket.
+// transport.tls configures the single public TLS connection in this mode.
+type CamouflageClientConfig struct {
+	SecretFile string `json:"secretFile"`
 }
 
 type TLSClientConfig struct {

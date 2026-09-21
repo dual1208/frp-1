@@ -185,6 +185,10 @@ func (c *defaultConnectorImpl) realConnect() (net.Conn, error) {
 	var tlsConfig *tls.Config
 	var err error
 	tlsEnable := lo.FromPtr(c.cfg.Transport.TLS.Enable)
+	if c.cfg.Transport.Protocol == "camouflage" {
+		// This mode builds one strictly verified public TLS connection below.
+		tlsEnable = false
+	}
 	if c.cfg.Transport.Protocol == "wss" {
 		tlsEnable = true
 	}
@@ -213,6 +217,16 @@ func (c *defaultConnectorImpl) realConnect() (net.Conn, error) {
 	dialOptions := []libnet.DialOption{}
 	protocol := c.cfg.Transport.Protocol
 	switch protocol {
+	case "camouflage":
+		protocol = "tcp"
+		outerTLS, headers, err := camouflageOptions(c.cfg)
+		if err != nil {
+			return nil, err
+		}
+		dialOptions = append(dialOptions, libnet.WithAfterHook(libnet.AfterHook{
+			Hook:     camouflageDialHook(outerTLS, headers, time.Duration(c.cfg.Transport.DialServerTimeout)*time.Second),
+			Priority: 100,
+		}))
 	case "websocket":
 		protocol = "tcp"
 		dialOptions = append(dialOptions, libnet.WithAfterHook(libnet.AfterHook{Hook: netpkg.DialHookWebsocket(protocol, "")}))

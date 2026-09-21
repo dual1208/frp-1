@@ -28,6 +28,7 @@ var (
 		"quic",
 		"websocket",
 		"wss",
+		"camouflage",
 	}
 	SupportedWireProtocols = []string{
 		"v1",

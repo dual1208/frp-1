@@ -3,6 +3,7 @@ package net
 import (
 	"context"
 	"net"
+	"net/http"
 	"net/url"
 
 	libnet "github.com/fatedier/golib/net"
@@ -22,6 +23,11 @@ func DialHookCustomTLSHeadByte(enableTLS bool, disableCustomTLSHeadByte bool) li
 }
 
 func DialHookWebsocket(protocol string, host string) libnet.AfterHookFunc {
+	return DialHookWebsocketWithHeaders(protocol, host, nil)
+}
+
+// DialHookWebsocketWithHeaders adds transport headers without changing proxy HTTP headers.
+func DialHookWebsocketWithHeaders(protocol string, host string, headers http.Header) libnet.AfterHookFunc {
 	return func(ctx context.Context, c net.Conn, addr string) (context.Context, net.Conn, error) {
 		if protocol != "wss" {
 			protocol = "ws"
@@ -41,6 +47,7 @@ func DialHookWebsocket(protocol string, host string) libnet.AfterHookFunc {
 			return nil, nil, err
 		}
 
+		cfg.Header = headers.Clone()
 		conn, err := websocket.NewClient(cfg, c)
 		if err != nil {
 			return nil, nil, err

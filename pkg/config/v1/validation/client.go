@@ -165,6 +165,19 @@ func validateTransportConfig(c *v1.ClientTransportConfig) (Warning, error) {
 		warnings = AppendError(warnings, checkTLSConfig("transport.tls.trustedCaFile", c.TLS.TrustedCaFile))
 	}
 
+	if c.Protocol == "camouflage" {
+		if c.Camouflage == nil || c.Camouflage.SecretFile == "" {
+			errs = AppendError(errs, fmt.Errorf("transport.camouflage.secretFile is required"))
+		}
+		if !lo.FromPtr(c.TLS.Enable) {
+			errs = AppendError(errs, fmt.Errorf("camouflage requires transport.tls.enable"))
+		}
+		if c.TLS.CertFile != "" || c.TLS.KeyFile != "" {
+			errs = AppendError(errs, fmt.Errorf("camouflage uses a server-authenticated public TLS connection; omit client certFile and keyFile"))
+		}
+	} else if c.Camouflage != nil {
+		errs = AppendError(errs, fmt.Errorf("transport.camouflage requires transport.protocol = camouflage"))
+	}
 	if !slices.Contains(SupportedTransportProtocols, c.Protocol) {
 		errs = AppendError(errs, fmt.Errorf("invalid transport.protocol, optional values are %v", SupportedTransportProtocols))
 	}

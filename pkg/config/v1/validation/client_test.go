@@ -138,3 +138,32 @@ func TestValidateClientFeatureGatesAreConfigScoped(t *testing.T) {
 	require.ErrorContains(t, err, "VirtualNet feature is not enabled")
 	require.Equal(t, defaultGatesBefore, featuregate.DefaultFeatureGates.String())
 }
+
+func TestValidateCamouflageTransport(t *testing.T) {
+	cases := []struct {
+		name   string
+		change func(*v1.ClientTransportConfig)
+		want   string
+	}{
+		{"valid", func(c *v1.ClientTransportConfig) {}, ""},
+		{"missing secret", func(c *v1.ClientTransportConfig) { c.Camouflage = nil }, "secretFile is required"},
+		{"TLS disabled", func(c *v1.ClientTransportConfig) { enabled := false; c.TLS.Enable = &enabled }, "requires transport.tls.enable"},
+		{"client certificate", func(c *v1.ClientTransportConfig) { c.TLS.CertFile = "old-client.pem" }, "omit client certFile"},
+		{"wrong protocol", func(c *v1.ClientTransportConfig) { c.Protocol = "tcp" }, "requires transport.protocol"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &v1.ClientCommonConfig{}
+			require.NoError(t, cfg.Complete())
+			cfg.Transport.Protocol = "camouflage"
+			cfg.Transport.Camouflage = &v1.CamouflageClientConfig{SecretFile: "private/secret"}
+			tc.change(&cfg.Transport)
+			_, err := validateTransportConfig(&cfg.Transport)
+			if tc.want == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tc.want)
+			}
+		})
+	}
+}
